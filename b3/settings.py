@@ -27,7 +27,7 @@ DEBUG = True
 
 ALLOWED_HOSTS = [
     '127.0.0.1',
-    'jekb3.herokuapp.com'
+    'jekb3.herokuapp.com',
 ]
 
 
