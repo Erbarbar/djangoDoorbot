@@ -1,0 +1,21 @@
+{% load static %}
+<link rel="stylesheet" type="text/css" href="{% static 'jeKers/style.css' %}" />
+<h1>jeKers na B3:</h1>
+
+
+{% if present_jeKers %}
+    <table>
+        <th>Nome</th>
+        <th>Departamento</th>
+        <th>Estatuto</th>
+        {% for jeKer in present_jeKers %}
+            <tr>
+                <td>{{ jeKer.name }}</td>
+                <td>{{ jeKer.department }}</td>
+                <td>{{ jeKer.status }}</td>
+            </tr>
+        {% endfor %}
+    </table>
+{% else %}
+    <p>A b3 está vazia</p>
+{% endif %}

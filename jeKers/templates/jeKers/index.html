@@ -1,0 +1,23 @@
+{% load static %}
+<link rel="stylesheet" type="text/css" href="{% static 'jeKers/style.css' %}" />
+<h1>jeKers:</h1>
+
+
+{% if all_jeKers %}
+    <table>
+        <th>Nome</th>
+        <th>Departamento</th>
+        <th>Estatuto</th>
+        <th>Presente</th>
+        {% for jeKer in all_jeKers %}
+            <tr>
+                <td>{{ jeKer.name }}</td>
+                <td>{{ jeKer.department }}</td>
+                <td>{{ jeKer.status }}</td>
+                <td>{{ jeKer.presence }}</td>
+            </tr>
+        {% endfor %}
+    </table>
+{% else %}
+    <p>A base de dados está vazia</p>
+{% endif %}
