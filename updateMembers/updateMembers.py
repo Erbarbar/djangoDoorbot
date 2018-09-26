@@ -28,7 +28,6 @@ def returnSlices(text, startString, endString):
     return text_slice
 
 def connectedDevices():
-
     url = "http://192.168.1.1/"
 
     page = urllib.urlopen(url).read()
@@ -44,17 +43,40 @@ def connectedDevices():
     ip_slices = returnSlices(text,"xx:xx:xx:xx:", "','")
 
     for ip in ip_slices:
-        print(ip.upper())
-
+        #print(ip.upper())
+        pass
     return ip_slices
 
-def sendMessage(*entering, entering_counter):
-
+def createOpenMessage(*entering):
     msg = "A b3 está aberta! <https://jekb3.herokuapp.com/b3|:telescope:>\n"
+    print(entering[0])
 
-    while(entering_counter>0):
-        entering_counter -= 1
-        msg += "["+entering[0][entering_counter]+"]"
+    for j in entering[0]:
+        msg += "["+j+"]"
+
+    print(msg)
+    return msg
+
+def createCloseMessage(*closing):
+    msg = "A b3 está fechada! <https://jekb3.herokuapp.com/b3|:telescope:>\n"
+    print(closing[0])
+
+    for j in closing[0]:
+        msg += "["+j+"]"
+
+    msg += "\nA porta ficou trancada? :thinking_face:"
+
+    print(msg)
+    return msg
+
+
+
+def sendMessage(*jeKers, action):
+
+    if(action=="open"):
+        msg = createOpenMessage(jeKers[0])
+    if(action=="close"):
+        msg = createCloseMessage(jeKers[0])
 
     # webhook_url = "https://hooks.slack.com/services/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"
     webhook_url = "https://hooks.slack.com/services/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"
@@ -68,26 +90,43 @@ def sendMessage(*entering, entering_counter):
     m = requests.request("POST", webhook_url, auth=('admin','adminpass'), json=payload)
 
 
-# ip_found = connectedDevices()
-
-ip_found=[
-"7C:00",
-"8A:D6",
-"BE:CA",
-"qw:we"]
+# ip_found=[
+# "7C:00",
+# "8A:D6",
+# "BE:CA",
+# "qw:we"]
 
 def updatePresence():
+    
+    ip_found = connectedDevices()
+
     url = "https://jekb3.herokuapp.com/api/jeKers/"
     r = requests.request("GET",url, auth=('admin', 'adminpass'))
 
     previous_presence = 0
 
     # quem está a entrar na sala
-    entering = [None]*len(ip_found)
-    entering_counter = 0
+    entering = []
+
+    # quem está a sair da sala
+    leaving = []
+
+    before_inside_count = 0
+    before_outside_count = 0
+
+    after_inside_count = 0
+    after_outside_count = 0
 
     # para cada jeKer na BD
     for j in r.json():
+
+        # conta todos os que estavam dentro
+        if j["presence"]==True:
+            before_inside_count += 1
+        # conta todos os que estavam fora
+        if j["presence"]==False:
+            before_outside_count += 1
+
         found = False
         # para cada ip encontrado
         for ip in ip_found:
@@ -98,22 +137,41 @@ def updatePresence():
                 if(j["presence"]==False):
                     # actualiza a BD
                     s = requests.request("PATCH", url+str(j['id'])+"/", auth=('admin', 'adminpass'), data={'presence':'True'})
+                    # actualiza local
                     print("%s entrou na B3"%(j["name"]))
-                    entering[entering_counter] = j["name"]
-                    entering_counter += 1
+                    j["presence"]=True
+                    entering.append(j["name"])
                 # se o jeKer já estiver como presente, quer dizer que não entrou neste ciclo
                 if(j["presence"]==True):
-                    previous_presence += 1
+                    pass
         # se nao está na sala, mas na BD está, quer dizer que saiu
         if (found==False and j["presence"]==True):
+            # actualiza BD
             s = requests.request("PATCH", url+str(j['id'])+"/", auth=('admin', 'adminpass'), data={'presence':'False'})
+            # actualiza local
             print("%s saiu da B3"%(j["name"]))
+            j["presence"] = False
+            leaving.append(j["name"])
 
+        # conta todos os que estão dentro
+        if j["presence"]==True:
+            after_inside_count += 1
+        # conta todos os que estão fora
+        if j["presence"]==False:
+            after_outside_count += 1
+
+    print("inside: %s -> %s" %(before_inside_count,after_inside_count))
+    print("outside: %s -> %s"%(before_outside_count, after_outside_count))
     # se alguém entrar na sala vazia
-    if previous_presence==0 and entering_counter>0:
-        sendMessage(entering,entering_counter=entering_counter)
+    if before_inside_count==0 and after_inside_count>0:
+        sendMessage(entering, action="open")
+
+    if (before_inside_count>0 and after_inside_count==0):
+        sendMessage(leaving, action="close")
+
 
 def job():
+    print("------------")
     updatePresence()
 
 updatePresence()
