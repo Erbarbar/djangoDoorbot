@@ -29,8 +29,14 @@ def returnSlices(text, startString, endString):
 
 def connectedDevices():
     url = "http://192.168.1.1/"
-
-    page = urllib.urlopen(url).read()
+    success= False
+    while success==False:
+        try:
+            page = urllib.urlopen(url).read()
+        except requests.exceptions.HTTPError:
+            print("Error opening wifi page")
+        else:
+            success=True
     soup = BeautifulSoup(page, "html.parser")
 
     data = soup.find_all('script', attrs={'type':'text/javascript'})
@@ -83,7 +89,7 @@ def sendMessage(*jeKers, action):
     payload= {
         "username":"HoDoor", 
         "text":msg, 
-        "channel":"@erbarbar",
+        "channel":"#b3",
         "icon_url":"https://pbs.twimg.com/profile_images/970049878465409024/ZmJw4bly_400x400.jpg",
         # "icon_emoji":":b3:"
         }
@@ -96,12 +102,11 @@ def sendMessage(*jeKers, action):
 # "BE:CA",
 # "qw:we"]
 
-def updatePresence():
+def updatePresence(r):
     
     ip_found = connectedDevices()
 
-    url = "https://jekb3.herokuapp.com/api/jeKers/"
-    r = requests.request("GET",url, auth=('admin', 'adminpass'))
+    
 
     previous_presence = 0
 
@@ -165,16 +170,20 @@ def updatePresence():
     # se alguém entrar na sala vazia
     if before_inside_count==0 and after_inside_count>0:
         sendMessage(entering, action="open")
+        r = requests.request("GET",url, auth=('admin', 'adminpass'))
 
     if (before_inside_count>0 and after_inside_count==0):
         sendMessage(leaving, action="close")
+        r = requests.request("GET",url, auth=('admin', 'adminpass'))
 
+url = "https://jekb3.herokuapp.com/api/jeKers/"
+r = requests.request("GET",url, auth=('admin', 'adminpass'))
 
 def job():
     print("------------")
-    updatePresence()
+    updatePresence(r)
 
-updatePresence()
+updatePresence(r)
 schedule.every().minutes.do(job)
 
 while True:
