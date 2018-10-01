@@ -91,7 +91,7 @@ def sendMessage(*jeKers, action):
         "username":"HoDoor", 
         "text":msg, 
         "channel":"@erbarbar",
-        "icon_url":"https://pbs.twimg.com/profile_images/970049878465409024/ZmJw4bly_400x400.jpg",
+        #"icon_url":"https://pbs.twimg.com/profile_images/970049878465409024/ZmJw4bly_400x400.jpg",
         # "icon_emoji":":b3:"
         }
     while True:
@@ -200,7 +200,7 @@ while True:
         print(e)
     else:
         updatePresence(jeKers)
-        schedule.every().minutes.do(job)
+        schedule.every(5).seconds.do(job)
         break
 
 
