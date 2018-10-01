@@ -29,14 +29,15 @@ def returnSlices(text, startString, endString):
 
 def connectedDevices():
     url = "http://192.168.1.1/"
-    success= False
-    while success==False:
+    while True:
         try:
-            page = urllib.urlopen(url).read()
-        except requests.exceptions.HTTPError:
-            print("Error opening wifi page")
+            url_open = urllib.urlopen(url)
+        except:
+            print("Error accessing b3, trying again")
         else:
-            success=True
+            break
+
+    page = url_open.read()
     soup = BeautifulSoup(page, "html.parser")
 
     data = soup.find_all('script', attrs={'type':'text/javascript'})
@@ -84,35 +85,37 @@ def sendMessage(*jeKers, action):
     if(action=="close"):
         msg = createCloseMessage(jeKers[0])
 
-    # webhook_url = "https://hooks.slack.com/services/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"
+    #webhook_url = "https://hooks.slack.com/services/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"
     webhook_url = "https://hooks.slack.com/services/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"
     payload= {
         "username":"HoDoor", 
         "text":msg, 
-        "channel":"#b3",
+        "channel":"@erbarbar",
         "icon_url":"https://pbs.twimg.com/profile_images/970049878465409024/ZmJw4bly_400x400.jpg",
         # "icon_emoji":":b3:"
         }
-    m = requests.request("POST", webhook_url, auth=('admin','adminpass'), json=payload)
+    while True:
+        try:
+            m = requests.request("POST", webhook_url, auth=('admin','adminpass'), json=payload)
+        except:
+            print("Error sending message to slack")
+        else:
+            break
+    
 
 
 # ip_found=[
-# "7C:00",
-# "8A:D6",
-# "BE:CA",
-# "qw:we"]
+#  "7C:00",
+#  "8A:D6",
+#  "BE:CA",
+#  "qw:we"]
 
-def updatePresence(r):
+def updatePresence(jeKers):
     
     ip_found = connectedDevices()
 
-    
-
-    previous_presence = 0
-
     # quem está a entrar na sala
     entering = []
-
     # quem está a sair da sala
     leaving = []
 
@@ -123,7 +126,7 @@ def updatePresence(r):
     after_outside_count = 0
 
     # para cada jeKer na BD
-    for j in r.json():
+    for j in jeKers:
 
         # conta todos os que estavam dentro
         if j["presence"]==True:
@@ -141,7 +144,12 @@ def updatePresence(r):
                 # se o jeKer estiver como ausente na Bd, quer dizer que acabou de entrar na b3
                 if(j["presence"]==False):
                     # actualiza a BD
-                    s = requests.request("PATCH", url+str(j['id'])+"/", auth=('admin', 'adminpass'), data={'presence':'True'})
+                    try:
+                        s = requests.request("PATCH", url+str(j['id'])+"/", auth=('admin', 'adminpass'), data={'presence':'True'})
+                    except requests.exceptions.HTTPError as e:
+                        print("Erro a fazer patch [presence: True]")
+                        print(e)
+
                     # actualiza local
                     print("%s entrou na B3"%(j["name"]))
                     j["presence"]=True
@@ -152,7 +160,12 @@ def updatePresence(r):
         # se nao está na sala, mas na BD está, quer dizer que saiu
         if (found==False and j["presence"]==True):
             # actualiza BD
-            s = requests.request("PATCH", url+str(j['id'])+"/", auth=('admin', 'adminpass'), data={'presence':'False'})
+            try:
+                s = requests.request("PATCH", url+str(j['id'])+"/", auth=('admin', 'adminpass'), data={'presence':'False'})
+            except requests.exceptions.HTTPError as e:
+                print("Erro a fazer patch [presence: False]")
+                print(e)
+
             # actualiza local
             print("%s saiu da B3"%(j["name"]))
             j["presence"] = False
@@ -170,22 +183,28 @@ def updatePresence(r):
     # se alguém entrar na sala vazia
     if before_inside_count==0 and after_inside_count>0:
         sendMessage(entering, action="open")
-        r = requests.request("GET",url, auth=('admin', 'adminpass'))
 
     if (before_inside_count>0 and after_inside_count==0):
         sendMessage(leaving, action="close")
-        r = requests.request("GET",url, auth=('admin', 'adminpass'))
-
-url = "https://jekb3.herokuapp.com/api/jeKers/"
-r = requests.request("GET",url, auth=('admin', 'adminpass'))
 
 def job():
     print("------------")
-    updatePresence(r)
+    updatePresence(jeKers)
 
-updatePresence(r)
-schedule.every().minutes.do(job)
+url = "https://jekb3.herokuapp.com/api/jeKers/"
+while True:
+    try:
+        jeKers = requests.request("GET",url, auth=('admin', 'adminpass')).json()
+    except requests.exceptions.HTTPError as e:
+        print("Não consegue ler a base de dados")
+        print(e)
+    else:
+        updatePresence(jeKers)
+        schedule.every().minutes.do(job)
+        break
+
 
 while True:
     schedule.run_pending()
     time.sleep(1)
+
