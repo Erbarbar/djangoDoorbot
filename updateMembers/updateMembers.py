@@ -92,7 +92,7 @@ def sendMessage(*jeKers, action):
         "text":msg, 
         "channel":"@erbarbar",
         #"icon_url":"https://pbs.twimg.com/profile_images/970049878465409024/ZmJw4bly_400x400.jpg",
-        # "icon_emoji":":b3:"
+        "icon_emoji":":b3:"
         }
     while True:
         try:
@@ -187,9 +187,26 @@ def updatePresence(jeKers):
     if (before_inside_count>0 and after_inside_count==0):
         sendMessage(leaving, action="close")
 
-def job():
+def job1():
     print("------------")
     updatePresence(jeKers)
+
+def job2():
+    webhook_url = "https://hooks.slack.com/services/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"
+    payload= {
+        "username":"HoDoor", 
+        "text":"up", 
+        "channel":"@erbarbar",
+        #"icon_url":"https://pbs.twimg.com/profile_images/970049878465409024/ZmJw4bly_400x400.jpg",
+        "icon_emoji":":b3:"
+        }
+    while True:
+        try:
+            m = requests.request("POST", webhook_url, auth=('admin','adminpass'), json=payload)
+        except:
+            print("Error sending message to slack")
+        else:
+            break
 
 url = "https://jekb3.herokuapp.com/api/jeKers/"
 while True:
@@ -200,7 +217,8 @@ while True:
         print(e)
     else:
         updatePresence(jeKers)
-        schedule.every(5).seconds.do(job)
+        schedule.every(5).seconds.do(job1)
+        schedule.every(30).minutes.do(job2)
         break
 
 
