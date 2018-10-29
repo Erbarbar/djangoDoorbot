@@ -4,6 +4,7 @@ import schedule
 import time
 from bs4 import BeautifulSoup
 
+debug = False
 
 def sumPrior(i,arr):
     res = 0
@@ -33,7 +34,8 @@ def connectedDevices():
         try:
             url_open = urllib.urlopen(url)
         except:
-            print("Error accessing b3, trying again")
+            if(debug):
+                print("Error accessing b3, trying again")
         else:
             break
 
@@ -50,65 +52,120 @@ def connectedDevices():
     ip_slices = returnSlices(text,"xx:xx:xx:xx:", "','")
 
     for ip in ip_slices:
-        #print(ip.upper())
+        #if(debug):
+        print(ip.upper())
         pass
     return ip_slices
 
 def createOpenMessage(*entering):
     msg = "A b3 está aberta! <https://jekb3.herokuapp.com/b3|:telescope:>\n"
-    print(entering[0])
+    if(debug):
+        print(entering[0])
 
     for j in entering[0]:
         msg += "["+j+"]"
 
-    print(msg)
+    if(debug):
+        print(msg)
     return msg
 
 def createCloseMessage(*closing):
     msg = "A b3 está fechada! <https://jekb3.herokuapp.com/b3|:telescope:>\n"
-    print(closing[0])
+    if(debug):
+        print(closing[0])
 
     for j in closing[0]:
         msg += "["+j+"]"
 
     msg += "\nA porta ficou trancada? :thinking_face:"
 
-    print(msg)
+    if(debug):
+        print(msg)
     return msg
 
+def createUpdateMessage(*updateJeker):
+    msg = ''
+    if(debug):
+        print(updateJeker[0])
 
+    for j in updateJeker[0]:
+        msg += "["+j+"]"
+
+    if(len(updateJeker[0])>1):
+        msg += " Entraram na b3"
+    else:
+        msg += "\nEntrou na b3"
+
+    if(debug):
+        print(msg)
+    return msg
+
+def createEnterMessage(*updateJeker):
+    msg = ''
+    if(debug):
+        print(updateJeker[0])
+
+    for j in updateJeker[0]:
+        msg += "["+j+"]"
+
+    if(len(updateJeker[0])>1):
+        msg += " Entraram na b3"
+    else:
+        msg += "\nEntrou na b3"
+
+    if(debug):
+        print(msg)
+    return msg
+
+def createLeaveMessage(*updateJeker):
+    msg = ''
+    if(debug):
+        print(updateJeker[0])
+
+    for j in updateJeker[0]:
+        msg += "["+j+"]"
+
+    if(len(updateJeker[0])>1):
+        msg += " Sairam da b3"
+    else:
+        msg += "\nSaiu da b3"
+
+    if(debug):
+        print(msg)
+    return msg
 
 def sendMessage(*jeKers, action):
-
+    channel = "#b3"
     if(action=="open"):
         msg = createOpenMessage(jeKers[0])
     if(action=="close"):
         msg = createCloseMessage(jeKers[0])
+    if(action=="enter"):
+        msg = createEnterMessage(jeKers[0])
+        channel = "@erbarbar"
+    if(action=="leave"):
+        msg = createLeaveMessage(jeKers[0])
+        channel = "@erbarbar"
 
     #webhook_url = "https://hooks.slack.com/services/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"
     webhook_url = "https://hooks.slack.com/services/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"
-    payload= {
-        "username":"HoDoor", 
-        "text":msg, 
-        "channel":"@erbarbar",
+    payload = {
+        "username" : "HoDoor", 
+        "text" : msg, 
+        "channel" : channel,
         #"icon_url":"https://pbs.twimg.com/profile_images/970049878465409024/ZmJw4bly_400x400.jpg",
-        "icon_emoji":":b3:"
-        }
+        "icon_emoji" : ":b3:"
+    }
+
     while True:
         try:
             m = requests.request("POST", webhook_url, auth=('admin','adminpass'), json=payload)
         except:
-            print("Error sending message to slack")
+            if(debug):
+                print("Error sending message to slack")
         else:
             break
     
-
-
-# ip_found=[
-#  "7C:00",
-#  "8A:D6",
-#  "BE:CA",
-#  "qw:we"]
 
 def updatePresence(jeKers):
     
@@ -127,14 +184,14 @@ def updatePresence(jeKers):
 
     # para cada jeKer na BD
     for j in jeKers:
-
+        
         # conta todos os que estavam dentro
         if j["presence"]==True:
             before_inside_count += 1
         # conta todos os que estavam fora
         if j["presence"]==False:
             before_outside_count += 1
-
+            
         found = False
         # para cada ip encontrado
         for ip in ip_found:
@@ -147,13 +204,15 @@ def updatePresence(jeKers):
                     try:
                         s = requests.request("PATCH", url+str(j['id'])+"/", auth=('admin', 'adminpass'), data={'presence':'True'})
                     except requests.exceptions.HTTPError as e:
-                        print("Erro a fazer patch [presence: True]")
-                        print(e)
+                        if(debug):
+                            print("Erro a fazer patch [presence: True]")
+                        if(debug):
+                            print(e)
 
                     # actualiza local
-                    print("%s entrou na B3"%(j["name"]))
                     j["presence"]=True
                     entering.append(j["name"])
+                    sendMessage(entering, action="enter")
                 # se o jeKer já estiver como presente, quer dizer que não entrou neste ciclo
                 if(j["presence"]==True):
                     pass
@@ -163,13 +222,15 @@ def updatePresence(jeKers):
             try:
                 s = requests.request("PATCH", url+str(j['id'])+"/", auth=('admin', 'adminpass'), data={'presence':'False'})
             except requests.exceptions.HTTPError as e:
-                print("Erro a fazer patch [presence: False]")
-                print(e)
+                if(debug):
+                    print("Erro a fazer patch [presence: False]")
+                if(debug):
+                    print(e)
 
             # actualiza local
-            print("%s saiu da B3"%(j["name"]))
             j["presence"] = False
             leaving.append(j["name"])
+            sendMessage(leaving, action="leave")
 
         # conta todos os que estão dentro
         if j["presence"]==True:
@@ -178,8 +239,6 @@ def updatePresence(jeKers):
         if j["presence"]==False:
             after_outside_count += 1
 
-    print("inside: %s -> %s" %(before_inside_count,after_inside_count))
-    print("outside: %s -> %s"%(before_outside_count, after_outside_count))
     # se alguém entrar na sala vazia
     if before_inside_count==0 and after_inside_count>0:
         sendMessage(entering, action="open")
@@ -188,37 +247,22 @@ def updatePresence(jeKers):
         sendMessage(leaving, action="close")
 
 def job1():
-    print("------------")
     updatePresence(jeKers)
 
-def job2():
-    webhook_url = "https://hooks.slack.com/services/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"
-    payload= {
-        "username":"HoDoor", 
-        "text":"up", 
-        "channel":"@erbarbar",
-        #"icon_url":"https://pbs.twimg.com/profile_images/970049878465409024/ZmJw4bly_400x400.jpg",
-        "icon_emoji":":b3:"
-        }
-    while True:
-        try:
-            m = requests.request("POST", webhook_url, auth=('admin','adminpass'), json=payload)
-        except:
-            print("Error sending message to slack")
-        else:
-            break
+
 
 url = "https://jekb3.herokuapp.com/api/jeKers/"
 while True:
     try:
         jeKers = requests.request("GET",url, auth=('admin', 'adminpass')).json()
     except requests.exceptions.HTTPError as e:
-        print("Não consegue ler a base de dados")
-        print(e)
+        if(debug):
+            print("Não consegue ler a base de dados")
+        if(debug):
+            print(e)
     else:
         updatePresence(jeKers)
         schedule.every(5).seconds.do(job1)
-        schedule.every(30).minutes.do(job2)
         break
 
 
