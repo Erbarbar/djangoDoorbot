@@ -5,6 +5,12 @@ import time
 from bs4 import BeautifulSoup
 
 debug = False
+jeKers = []
+
+
+
+
+
 
 def sumPrior(i,arr):
     res = 0
@@ -29,6 +35,8 @@ def returnSlices(text, startString, endString):
     return text_slice
 
 def connectedDevices():
+    if(debug):
+        print("connectedDevices")
     url = "http://192.168.1.1/"
     while True:
         try:
@@ -52,109 +60,26 @@ def connectedDevices():
     ip_slices = returnSlices(text,"xx:xx:xx:xx:", "','")
 
     for ip in ip_slices:
-        #if(debug):
-        print(ip.upper())
+        if(debug):
+            print(ip.upper())
         pass
+
+    if(debug):
+        print("---")
     return ip_slices
 
-def createOpenMessage(*entering):
-    msg = "A b3 está aberta! <https://jekb3.herokuapp.com/b3|:telescope:>\n"
-    if(debug):
-        print(entering[0])
 
-    for j in entering[0]:
-        msg += "["+j+"]"
-
-    if(debug):
-        print(msg)
-    return msg
-
-def createCloseMessage(*closing):
-    msg = "A b3 está fechada! <https://jekb3.herokuapp.com/b3|:telescope:>\n"
-    if(debug):
-        print(closing[0])
-
-    for j in closing[0]:
-        msg += "["+j+"]"
-
-    msg += "\nA porta ficou trancada? :thinking_face:"
-
-    if(debug):
-        print(msg)
-    return msg
-
-def createUpdateMessage(*updateJeker):
-    msg = ''
-    if(debug):
-        print(updateJeker[0])
-
-    for j in updateJeker[0]:
-        msg += "["+j+"]"
-
-    if(len(updateJeker[0])>1):
-        msg += " Entraram na b3"
-    else:
-        msg += "\nEntrou na b3"
-
-    if(debug):
-        print(msg)
-    return msg
-
-def createEnterMessage(*updateJeker):
-    msg = ''
-    if(debug):
-        print(updateJeker[0])
-
-    for j in updateJeker[0]:
-        msg += "["+j+"]"
-
-    if(len(updateJeker[0])>1):
-        msg += " Entraram na b3"
-    else:
-        msg += "\nEntrou na b3"
-
-    if(debug):
-        print(msg)
-    return msg
-
-def createLeaveMessage(*updateJeker):
-    msg = ''
-    if(debug):
-        print(updateJeker[0])
-
-    for j in updateJeker[0]:
-        msg += "["+j+"]"
-
-    if(len(updateJeker[0])>1):
-        msg += " Sairam da b3"
-    else:
-        msg += "\nSaiu da b3"
-
-    if(debug):
-        print(msg)
-    return msg
-
-def sendMessage(*jeKers, action):
-    channel = "#b3"
-    if(action=="open"):
-        msg = createOpenMessage(jeKers[0])
-    if(action=="close"):
-        msg = createCloseMessage(jeKers[0])
-    if(action=="enter"):
-        msg = createEnterMessage(jeKers[0])
-        channel = "@erbarbar"
-    if(action=="leave"):
-        msg = createLeaveMessage(jeKers[0])
-        channel = "@erbarbar"
+def sendMessage(jeKer, action):
+    channel = "@" + jeKer
 
     #webhook_url = "https://hooks.slack.com/services/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"
     webhook_url = "https://hooks.slack.com/services/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"
     payload = {
-        "username" : "HoDoor", 
-        "text" : msg, 
+        "username" : "Door BOT", 
+        "text" : "Foste a ultima pessoa a sair da b3, a porta ficou trancada?", 
         "channel" : channel,
-        #"icon_url":"https://pbs.twimg.com/profile_images/970049878465409024/ZmJw4bly_400x400.jpg",
-        "icon_emoji" : ":b3:"
+        "icon_url":"https://pbs.twimg.com/profile_images/970049878465409024/ZmJw4bly_400x400.jpg",
+        #"icon_emoji" : ":b3:"
     }
 
     while True:
@@ -167,10 +92,10 @@ def sendMessage(*jeKers, action):
             break
     
 
-def updatePresence(jeKers):
-    
+def updatePresence(jeK):
+    if(debug):
+        print("updatePresence")
     ip_found = connectedDevices()
-
     # quem está a entrar na sala
     entering = []
     # quem está a sair da sala
@@ -182,9 +107,10 @@ def updatePresence(jeKers):
     after_inside_count = 0
     after_outside_count = 0
 
+    changes = False
+
     # para cada jeKer na BD
-    for j in jeKers:
-        
+    for j in jeK:
         # conta todos os que estavam dentro
         if j["presence"]==True:
             before_inside_count += 1
@@ -206,13 +132,14 @@ def updatePresence(jeKers):
                     except requests.exceptions.HTTPError as e:
                         if(debug):
                             print("Erro a fazer patch [presence: True]")
-                        if(debug):
                             print(e)
 
                     # actualiza local
                     j["presence"]=True
                     entering.append(j["name"])
-                    sendMessage(entering, action="enter")
+                    changes = True
+                    print(time.strftime("[%x] %X - ") + j["name"] + " entrou")
+                    #sendMessage(entering, action="enter")
                 # se o jeKer já estiver como presente, quer dizer que não entrou neste ciclo
                 if(j["presence"]==True):
                     pass
@@ -224,13 +151,14 @@ def updatePresence(jeKers):
             except requests.exceptions.HTTPError as e:
                 if(debug):
                     print("Erro a fazer patch [presence: False]")
-                if(debug):
                     print(e)
 
             # actualiza local
             j["presence"] = False
             leaving.append(j["name"])
-            sendMessage(leaving, action="leave")
+            changes = True
+            print(time.strftime("[%x] %X - ") + j["name"] + " saiu")
+            #sendMessage(leaving, action="leave")
 
         # conta todos os que estão dentro
         if j["presence"]==True:
@@ -241,32 +169,48 @@ def updatePresence(jeKers):
 
     # se alguém entrar na sala vazia
     if before_inside_count==0 and after_inside_count>0:
-        sendMessage(entering, action="open")
+        #sendMessage(entering, action="open")
+        if(debug):
+            print("B3 aberta")
+        pass
 
     if (before_inside_count>0 and after_inside_count==0):
-        sendMessage(leaving, action="close")
+        #for leaver in leaving:
+            #sendMessage(leaver, action="close")
+        print("B3 fechada")
+        #sendMessage(leaving, action="close")
+
+    if(changes):
+        jeKers = getJeKers()
+
+
+def getJeKers():
+    while True:
+        try:
+            jeKers = requests.request("GET",url, auth=('admin', 'adminpass')).json()
+        except requests.exceptions.HTTPError as e:
+            if(debug):
+                print("Não consegue ler a base de dados")
+                print(e)
+        else:
+            if(debug):
+                for j in jeKers:
+                    print(j["name"] + "->" + j["mac_address"])
+                print("----------")
+            break
+    return jeKers
+
 
 def job1():
     updatePresence(jeKers)
 
 
-
 url = "https://jekb3.herokuapp.com/api/jeKers/"
-while True:
-    try:
-        jeKers = requests.request("GET",url, auth=('admin', 'adminpass')).json()
-    except requests.exceptions.HTTPError as e:
-        if(debug):
-            print("Não consegue ler a base de dados")
-        if(debug):
-            print(e)
-    else:
-        updatePresence(jeKers)
-        schedule.every(5).seconds.do(job1)
-        break
+jeKers = getJeKers()
+job1()
+schedule.every(5).seconds.do(job1)
 
 
 while True:
     schedule.run_pending()
     time.sleep(1)
-
